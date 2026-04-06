@@ -1,0 +1,130 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+}
+
+model Faction {
+  id          String       @id @default(cuid())
+  bsdataId    String       @unique
+  name        String
+  description String?
+  detachments Detachment[]
+  units       Unit[]
+  createdAt   DateTime     @default(now())
+}
+
+model Detachment {
+  id           String        @id @default(cuid())
+  bsdataId     String        @unique
+  name         String
+  factionId    String
+  faction      Faction       @relation(fields: [factionId], references: [id])
+  rule         String?
+  enhancements Enhancement[]
+  stratagems   Stratagem[]
+  armyLists    ArmyList[]
+}
+
+model Enhancement {
+  id           String     @id @default(cuid())
+  bsdataId     String     @unique
+  name         String
+  detachmentId String
+  detachment   Detachment @relation(fields: [detachmentId], references: [id])
+  points       Int
+  description  String?
+}
+
+model Stratagem {
+  id           String     @id @default(cuid())
+  bsdataId     String     @unique
+  name         String
+  detachmentId String
+  detachment   Detachment @relation(fields: [detachmentId], references: [id])
+  cost         Int
+  phase        String?
+  description  String?
+}
+
+model Unit {
+  id               String        @id @default(cuid())
+  bsdataId         String        @unique
+  name             String
+  factionId        String
+  faction          Faction       @relation(fields: [factionId], references: [id])
+  points           Int
+  role             String        // Battleline, Character, Monster, Vehicle, etc.
+  keywords         String[]
+  factionKeywords  String[]
+  movement         String?
+  toughness        Int?
+  save             Int?
+  wounds           Int?
+  leadership       Int?
+  objectiveControl Int?
+  invulnSave       Int?
+  isLeader         Boolean       @default(false)
+  leaderOf         String[]      // unit names this can lead
+  modelCount       Int           @default(1)
+  maxCount         Int           @default(3) // 6 for Battleline, 3 for all others
+  sizeCosts        Json          @default("[]") // [{size: number, points: number}] sorted by size
+  wargearGroups    Json          @default("[]") // [{modelRole, groupName, min, max, options:[]}]
+  abilities        Ability[]
+  weaponProfiles   WeaponProfile[]
+  armyListUnits    ArmyListUnit[]
+}
+
+model WeaponProfile {
+  id        String  @id @default(cuid())
+  bsdataId  String
+  name      String
+  unitId    String
+  unit      Unit    @relation(fields: [unitId], references: [id])
+  range     String?
+  attacks   String?
+  skill     String?   // BS or WS
+  strength  String?
+  armorPen  String?
+  damage    String?
+  keywords  String[]
+  isDefault Boolean @default(true)
+
+  @@unique([bsdataId, unitId])
+}
+
+model Ability {
+  id          String  @id @default(cuid())
+  bsdataId    String
+  name        String
+  unitId      String
+  unit        Unit    @relation(fields: [unitId], references: [id])
+  description String?
+  phase       String?
+
+  @@unique([bsdataId, unitId])
+}
+
+model ArmyList {
+  id           String         @id @default(cuid())
+  name         String
+  factionId    String
+  detachmentId String
+  detachment   Detachment     @relation(fields: [detachmentId], references: [id])
+  pointsLimit  Int            @default(2000)
+  units        ArmyListUnit[]
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+}
+
+model ArmyListUnit {
+  id         String   @id @default(cuid())
+  armyListId String
+  armyList   ArmyList @relation(fields: [armyListId], references: [id])
+  unitId     String
+  unit       Unit     @relation(fields: [unitId], references: [id])
+  quantity   Int      @default(1)
+  notes      String?
+}
