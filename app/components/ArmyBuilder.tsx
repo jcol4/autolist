@@ -40,9 +40,9 @@ type Unit = {
   points: number
   movement: string | null
   toughness: number | null
-  save: number | null
+  save: string | null
   wounds: number | null
-  leadership: number | null
+  leadership: string | null
   objectiveControl: number | null
   isLeader: boolean
   maxCount: number
@@ -187,9 +187,9 @@ function UnitCard({ unit, currentQty, onAdd, isLegends }: { unit: Unit; currentQ
           <div className="flex gap-3 pt-2 flex-wrap">
             <Stat label="M"  value={unit.movement} />
             <Stat label="T"  value={unit.toughness} />
-            <Stat label="Sv" value={unit.save ? `${unit.save}+` : null} />
+            <Stat label="Sv" value={unit.save} />
             <Stat label="W"  value={unit.wounds} />
-            <Stat label="Ld" value={unit.leadership ? `${unit.leadership}+` : null} />
+            <Stat label="Ld" value={unit.leadership} />
             <Stat label="OC" value={unit.objectiveControl} />
           </div>
 

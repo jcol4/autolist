@@ -1,0 +1,3 @@
+[submodule "data/wh40k-10e-bsdata"]
+	path = data/wh40k-10e-bsdata
+	url = https://github.com/BSData/wh40k-10e

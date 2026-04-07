@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
+  provider = "postgresql"
 }
 
 model Faction {
@@ -17,15 +17,15 @@ model Faction {
 }
 
 model Detachment {
-  id           String        @id @default(cuid())
-  bsdataId     String        @unique
-  name         String
-  factionId    String
-  faction      Faction       @relation(fields: [factionId], references: [id])
-  rule         String?
-  enhancements Enhancement[]
-  stratagems   Stratagem[]
-  armyLists    ArmyList[]
+  id              String        @id @default(cuid())
+  bsdataId        String        @unique
+  name            String
+  factionId       String
+  faction         Faction       @relation(fields: [factionId], references: [id])
+  ruleName        String?
+  ruleDescription String?       @db.Text
+  enhancements    Enhancement[]
+  armyLists       ArmyList[]
 }
 
 model Enhancement {
@@ -35,64 +35,92 @@ model Enhancement {
   detachmentId String
   detachment   Detachment @relation(fields: [detachmentId], references: [id])
   points       Int
-  description  String?
-}
-
-model Stratagem {
-  id           String     @id @default(cuid())
-  bsdataId     String     @unique
-  name         String
-  detachmentId String
-  detachment   Detachment @relation(fields: [detachmentId], references: [id])
-  cost         Int
-  phase        String?
-  description  String?
+  description  String?    @db.Text
+  /// e.g. "Captain model only" — parsed from description
+  restriction  String?
 }
 
 model Unit {
-  id               String        @id @default(cuid())
-  bsdataId         String        @unique
+  id               String         @id @default(cuid())
+  bsdataId         String         @unique
   name             String
   factionId        String
-  faction          Faction       @relation(fields: [factionId], references: [id])
+  faction          Faction        @relation(fields: [factionId], references: [id])
+
+  /// Base points cost (for minimum squad size)
   points           Int
-  role             String        // Battleline, Character, Monster, Vehicle, etc.
+  /// JSON array: [{minModels: 6, points: 170}] — cost tiers for larger squads
+  scaledCosts      String         @default("[]")
+
+  role             String         // Character, Battleline, Infantry, Vehicle, etc.
   keywords         String[]
   factionKeywords  String[]
+
+  /// Stats
   movement         String?
   toughness        Int?
-  save             Int?
+  save             String?
   wounds           Int?
-  leadership       Int?
+  leadership       String?
   objectiveControl Int?
-  invulnSave       Int?
-  isLeader         Boolean       @default(false)
-  leaderOf         String[]      // unit names this can lead
-  modelCount       Int           @default(1)
-  maxCount         Int           @default(3) // 6 for Battleline, 3 for all others
-  sizeCosts        Json          @default("[]") // [{size: number, points: number}] sorted by size
-  wargearGroups    Json          @default("[]") // [{modelRole, groupName, min, max, options:[]}]
+  invulnSave       String?
+
+  /// Leader rules
+  isLeader         Boolean        @default(false)
+  /// Names of units this leader can be attached to
+  leaderOf         String[]
+
+  /// Squad size constraints
+  minModels        Int            @default(1)
+  maxModels        Int            @default(1)
+
   abilities        Ability[]
   weaponProfiles   WeaponProfile[]
+  /// Structured weapon choices (sergeant options, squad specials, etc.)
+  weaponOptions    WeaponOption[]
   armyListUnits    ArmyListUnit[]
 }
 
 model WeaponProfile {
-  id        String  @id @default(cuid())
-  bsdataId  String
-  name      String
-  unitId    String
-  unit      Unit    @relation(fields: [unitId], references: [id])
-  range     String?
-  attacks   String?
-  skill     String?   // BS or WS
-  strength  String?
-  armorPen  String?
-  damage    String?
-  keywords  String[]
-  isDefault Boolean @default(true)
+  id          String   @id @default(cuid())
+  bsdataId    String
+  name        String
+  unitId      String
+  unit        Unit     @relation(fields: [unitId], references: [id])
+  weaponType  String   // "Ranged" or "Melee"
+  range       String?
+  attacks     String?
+  /// BS for ranged, WS for melee
+  skill       String?
+  strength    String?
+  armorPen    String?
+  damage      String?
+  keywords    String[]
+}
 
-  @@unique([bsdataId, unitId])
+/// A weapon choice slot on a unit
+/// e.g. Sergeant Weapon 1: [Heavy Bolt Pistol, Plasma Pistol, Hand Flamer]
+/// or   Special: w/ Plasma Pistol  (max 1, increases to 2 at 10 models)
+model WeaponOption {
+  id                   String  @id @default(cuid())
+  bsdataId             String
+  unitId               String
+  unit                 Unit    @relation(fields: [unitId], references: [id])
+
+  /// e.g. "Weapon 1", "Weapon 2", "Special: w/ Plasma Pistol", "Fixed Loadout"
+  slotName             String
+  /// "sergeant", "trooper", "special_model"
+  modelType            String
+  /// e.g. "Assault Intercessor Sergeant with Jump Pack"
+  modelName            String
+  /// Weapon names available in this slot
+  choices              String[]
+  minSelections        Int     @default(1)
+  maxSelections        Int     @default(1)
+  /// If squad size >= this, maxSelections increases to conditionalMax
+  conditionalThreshold Int?
+  conditionalMax       Int?
+  defaultChoice        String?
 }
 
 model Ability {
@@ -101,10 +129,7 @@ model Ability {
   name        String
   unitId      String
   unit        Unit    @relation(fields: [unitId], references: [id])
-  description String?
-  phase       String?
-
-  @@unique([bsdataId, unitId])
+  description String? @db.Text
 }
 
 model ArmyList {
@@ -125,6 +150,6 @@ model ArmyListUnit {
   armyList   ArmyList @relation(fields: [armyListId], references: [id])
   unitId     String
   unit       Unit     @relation(fields: [unitId], references: [id])
-  quantity   Int      @default(1)
+  modelCount Int      @default(5)
   notes      String?
 }
