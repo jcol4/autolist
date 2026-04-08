@@ -11,9 +11,9 @@ model Faction {
   bsdataId    String       @unique
   name        String
   description String?
+  createdAt   DateTime     @default(now())
   detachments Detachment[]
   units       Unit[]
-  createdAt   DateTime     @default(now())
 }
 
 model Detachment {
@@ -21,11 +21,11 @@ model Detachment {
   bsdataId        String        @unique
   name            String
   factionId       String
-  faction         Faction       @relation(fields: [factionId], references: [id])
   ruleName        String?
-  ruleDescription String?       @db.Text
-  enhancements    Enhancement[]
+  ruleDescription String?
   armyLists       ArmyList[]
+  faction         Faction       @relation(fields: [factionId], references: [id])
+  enhancements    Enhancement[]
 }
 
 model Enhancement {
@@ -33,29 +33,25 @@ model Enhancement {
   bsdataId     String     @unique
   name         String
   detachmentId String
-  detachment   Detachment @relation(fields: [detachmentId], references: [id])
   points       Int
-  description  String?    @db.Text
+  description  String?
   /// e.g. "Captain model only" — parsed from description
   restriction  String?
+  detachment   Detachment @relation(fields: [detachmentId], references: [id])
 }
 
 model Unit {
-  id               String         @id @default(cuid())
-  bsdataId         String         @unique
+  id               String          @id @default(cuid())
+  bsdataId         String          @unique
   name             String
   factionId        String
-  faction          Faction        @relation(fields: [factionId], references: [id])
-
   /// Base points cost (for minimum squad size)
   points           Int
   /// JSON array: [{minModels: 6, points: 170}] — cost tiers for larger squads
-  scaledCosts      String         @default("[]")
-
-  role             String         // Character, Battleline, Infantry, Vehicle, etc.
+  scaledCosts      String          @default("[]")
+  role             String
   keywords         String[]
   factionKeywords  String[]
-
   /// Stats
   movement         String?
   toughness        Int?
@@ -64,49 +60,44 @@ model Unit {
   leadership       String?
   objectiveControl Int?
   invulnSave       String?
-
   /// Leader rules
-  isLeader         Boolean        @default(false)
+  isLeader         Boolean         @default(false)
   /// Names of units this leader can be attached to
   leaderOf         String[]
-
   /// Squad size constraints
-  minModels        Int            @default(1)
-  maxModels        Int            @default(1)
-
+  minModels        Int             @default(1)
+  maxModels        Int             @default(1)
   abilities        Ability[]
-  weaponProfiles   WeaponProfile[]
-  /// Structured weapon choices (sergeant options, squad specials, etc.)
-  weaponOptions    WeaponOption[]
   armyListUnits    ArmyListUnit[]
+  faction          Faction         @relation(fields: [factionId], references: [id])
+  weaponOptions    WeaponOption[]
+  weaponProfiles   WeaponProfile[]
 }
 
 model WeaponProfile {
-  id          String   @id @default(cuid())
-  bsdataId    String
-  name        String
-  unitId      String
-  unit        Unit     @relation(fields: [unitId], references: [id])
-  weaponType  String   // "Ranged" or "Melee"
-  range       String?
-  attacks     String?
+  id         String   @id @default(cuid())
+  bsdataId   String
+  name       String
+  unitId     String
+  weaponType String
+  range      String?
+  attacks    String?
   /// BS for ranged, WS for melee
-  skill       String?
-  strength    String?
-  armorPen    String?
-  damage      String?
-  keywords    String[]
+  skill      String?
+  strength   String?
+  armorPen   String?
+  damage     String?
+  keywords   String[]
+  unit       Unit     @relation(fields: [unitId], references: [id])
 }
 
 /// A weapon choice slot on a unit
 /// e.g. Sergeant Weapon 1: [Heavy Bolt Pistol, Plasma Pistol, Hand Flamer]
 /// or   Special: w/ Plasma Pistol  (max 1, increases to 2 at 10 models)
 model WeaponOption {
-  id                   String  @id @default(cuid())
+  id                   String   @id @default(cuid())
   bsdataId             String
   unitId               String
-  unit                 Unit    @relation(fields: [unitId], references: [id])
-
   /// e.g. "Weapon 1", "Weapon 2", "Special: w/ Plasma Pistol", "Fixed Loadout"
   slotName             String
   /// "sergeant", "trooper", "special_model"
@@ -115,12 +106,13 @@ model WeaponOption {
   modelName            String
   /// Weapon names available in this slot
   choices              String[]
-  minSelections        Int     @default(1)
-  maxSelections        Int     @default(1)
+  minSelections        Int      @default(1)
+  maxSelections        Int      @default(1)
   /// If squad size >= this, maxSelections increases to conditionalMax
   conditionalThreshold Int?
   conditionalMax       Int?
   defaultChoice        String?
+  unit                 Unit     @relation(fields: [unitId], references: [id])
 }
 
 model Ability {
@@ -128,8 +120,8 @@ model Ability {
   bsdataId    String
   name        String
   unitId      String
+  description String?
   unit        Unit    @relation(fields: [unitId], references: [id])
-  description String? @db.Text
 }
 
 model ArmyList {
@@ -137,19 +129,30 @@ model ArmyList {
   name         String
   factionId    String
   detachmentId String
-  detachment   Detachment     @relation(fields: [detachmentId], references: [id])
   pointsLimit  Int            @default(2000)
-  units        ArmyListUnit[]
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
+  detachment   Detachment     @relation(fields: [detachmentId], references: [id])
+  units        ArmyListUnit[]
 }
 
 model ArmyListUnit {
   id         String   @id @default(cuid())
   armyListId String
-  armyList   ArmyList @relation(fields: [armyListId], references: [id])
   unitId     String
-  unit       Unit     @relation(fields: [unitId], references: [id])
   modelCount Int      @default(5)
   notes      String?
+  armyList   ArmyList @relation(fields: [armyListId], references: [id])
+  unit       Unit     @relation(fields: [unitId], references: [id])
+}
+
+model MetaSnapshot {
+  id        String   @id @default(cuid())
+  faction   String
+  source    String
+  scrapedAt DateTime @default(now())
+  /// JSON: { detachment: string, topUnits: [{name, frequency, notes}], generalNotes: string, sourceUrls: string[] }
+  data      String   @db.Text
+
+  @@index([faction, scrapedAt])
 }

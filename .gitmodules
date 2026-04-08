@@ -1,6 +1,6 @@
 [submodule "data/wh40k-10e-bsdata"]
-	path = data/wh40k-10e-bsdata
+	path = data/wh40k-10e
 	url = https://github.com/BSData/wh40k-10e
-[submodule "/home/jpcol04/autolist/data/wh40k-10th"]
-	path = /home/jpcol04/autolist/data/wh40k-10th
+[submodule "data/wh40k-10th"]
+	path = data/wh40k-10th
 	url = https://github.com/BSData/wh40k-10e.git
